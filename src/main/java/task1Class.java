@@ -134,7 +134,7 @@ class HashTable<T> {
         return false;
     }
 
-    public T value(T key) {
+    public T valueOf(T key) {
         if (contains(key)) {
             for (Pair<T, T> it : hashTable[indexOf(key)]) {
                 if (it.getKey() == key) return it.getValue();
