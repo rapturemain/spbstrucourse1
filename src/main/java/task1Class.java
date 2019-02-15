@@ -1,19 +1,12 @@
 import javafx.util.Pair;
 
+import java.sql.Array;
 import java.util.*;
 
 public class task1Class {
 
      public static void main(String[] args) {
-         HashTable table1 = new HashTable(10);
-         HashTable table2 = new HashTable(10);
-         HashTable table3 = new HashTable(10);
-         for (int i = 0; i < 10000000; i++) {
-             table1.add(new Pair(i, i + 2));
-         }
-         table2 = HashTable.toHashTable(table1.toArray(), 10);
-         System.out.println(table1.equals(table2));
-         System.out.println("end");
+
      }
 }
 
@@ -79,9 +72,23 @@ class IntHashTable {
     }
 }
 
+/*
+Description
+Хэш таблица с парами различных типов.
+Данные хранятся в виде массива размером, настраиваемом пользователем или 521, если не указано иного.
+Индексы значений в таблице являются модулем хэша ключа пары по размеру таблицы,
+в соответсвующем данной ячейке подсписке хранится сама пара, а в случае возникновения коллизий в этом подсписке
+хранятся и остальные значения, соответсвующие данной ячейке.
+Если размер подсписка превысит maxSizeOfCell (по стандарту 5), то происходит пересборка таблицы с увеличением её
+размера в multiplierLimitReached раз (по стандарту 1.3).
+Список так же позволяет хранить несколько значений, соответсвующих одному ключу (например, телефонная книга).
+| Индекс | Подсписок |
+    1     {1 to 2, "somethingWithSameHash" to true, ...}
+    2     {4 to "test", ...}
+    3     {'c' to {"testOther", true, "+71234567890", ...}, ...}
+  */
 class HashTable<T> {
     HashTable() {
-        totalCells = 0;
         hashTable = new List[tableSize];
         for (int i = 0; i < tableSize; i++) {
             hashTable[i] = new ArrayList<>();
@@ -90,23 +97,50 @@ class HashTable<T> {
 
     HashTable(int size) {
         tableSize = size;
-        totalCells = 0;
         hashTable = new List[tableSize];
         for (int i = 0; i < tableSize; i++) {
             hashTable[i] = new ArrayList<>();
         }
     }
 
+    HashTable(int size, int maxSizeOfCell) {
+        tableSize = size;
+        maxSize = maxSizeOfCell;
+        hashTable = new List[tableSize];
+        for (int i = 0; i < tableSize; i++) {
+            hashTable[i] = new ArrayList<>();
+        }
+    }
+
+    HashTable(int size, int maxSizeOfCell, double multiplierLimitReached) {
+        tableSize = size;
+        maxSize = maxSizeOfCell;
+        multiplier = multiplierLimitReached;
+        hashTable = new List[tableSize];
+        for (int i = 0; i < tableSize; i++) {
+            hashTable[i] = new ArrayList<>();
+        }
+    }
+
+    private Integer maxSize = 5;
     private Integer tableSize = 521;
-    private Integer totalCells;
+    private Integer totalCells = 0;
+    private Double multiplier = 1.3;
     private List<Pair<T, T>>[] hashTable;
 
+    /*
+    Индекс ячейки таблицы по хэшу ключа.
+     */
     private int indexOf(T key) {
         return key.hashCode() % tableSize;
     }
 
+    /*
+    Перестройка таблицы с увеличенным в multiplier раз размером.
+    Использует прямое добавление в новую таблицу элементов старой.
+     */
     private void rebuildTable() {
-        tableSize = (int) (tableSize * 1.3);
+        tableSize = (int) (tableSize * multiplier);
         List<Pair<T, T>>[] table = new List[tableSize];
         for (int i = 0; i < tableSize; i++) {
             table[i] = new ArrayList<>();
@@ -119,6 +153,11 @@ class HashTable<T> {
         hashTable = table;
     }
 
+    /*
+    Определяет, есть ли данный ключ в хэш таблице
+    Использует поиск, основанный на хэше и переборе в листе ячейки таблицы.
+    В случае, если какая-то ячейка вдруг имеет длину больше maxSize, то вызывает перестройку таблицы.
+     */
     public boolean contains(T key) {
         if (key == null) {
             return false;
@@ -130,11 +169,38 @@ class HashTable<T> {
                 return true;
             }
         }
-        if (hashTable[index].size() > 4) rebuildTable();
+        if (hashTable[index].size() > maxSize - 1) rebuildTable();
         return false;
     }
 
-    public T valueOf(T key) {
+    /*
+    Определяет, есть ли данное значение в хэш таблице
+    Использует полный перебор таблицы для поиска значения.
+     */
+    public boolean containsValue(T value) {
+        if (value == null) {
+            return false;
+        }
+        for (List<Pair<T, T>> i : hashTable) {
+            for (Pair<T, T> j : i) {
+                if (j.getValue().getClass() == LinkedList.class) {
+                    for (T it : (LinkedList<T>) (j.getValue())) {
+                        if (it == value) return true;
+                    }
+                } else {
+                    if (j.getValue() == value) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    /*
+    Возвращает значение по ключу, поиск индекса по хэшу.
+     */
+    public T get(T key) {
         if (contains(key)) {
             for (Pair<T, T> it : hashTable[indexOf(key)]) {
                 if (it.getKey() == key) return it.getValue();
@@ -143,11 +209,45 @@ class HashTable<T> {
         return null;
     }
 
+    /*
+    Добавляет пару в таблицу, если такой ключ уже есть в таблице, то создает Pair<T, LinkedList<T>>, и помещает старые
+    и новое значения в этот лист.
+    TODO() ПРОБЛЕМА:
+    Если пользователь сначала будет в паре хранить List, то все последующие значения будут помещаться в тот самый лист,
+    вместо создания нового для разных значений
+    "test" to {1, 2, 3} -> "test" to {1, 2, 3, 4} вместо "test" to {1, 2, 3} -> "test" to {{1, 2, 3}, 4}
+     */
     public void add(Pair<T, T> obj) {
-        if (obj != null && !contains(obj.getKey())) {
-            hashTable[indexOf(obj.getKey())].add(obj);
+        if (obj == null) {
+            return;
         }
-        totalCells += 1;
+        if (!contains(obj.getKey())) {
+            hashTable[indexOf(obj.getKey())].add(obj);
+            totalCells += 1;
+        } else {
+            T key = obj.getKey();
+            T newValue = obj.getValue();
+            T oldValue = null;
+            int cellIndex = indexOf(key);
+            int inCellIndex = 0;
+            int size = hashTable[cellIndex].size();
+            for (int i = 0; i < size; i++) {
+                if (hashTable[cellIndex].get(i).getKey() == key) {
+                    oldValue = hashTable[cellIndex].get(i).getValue();
+                    inCellIndex = i;
+                }
+            }
+            List<T> newList = new LinkedList();
+            if (oldValue.getClass() == LinkedList.class) {
+                newList.addAll((List) oldValue);
+            } else {
+                newList.add(oldValue);
+            }
+            newList.add(newValue);
+            Pair<T, LinkedList<T>> newPair = new Pair(key, newList);
+            hashTable[cellIndex].remove(inCellIndex);
+            hashTable[cellIndex].add((Pair<T, T>) newPair);
+        }
     }
 
     public void addAll(Pair<T, T>[] obj) {
@@ -160,6 +260,9 @@ class HashTable<T> {
         this.addAll(obj.toArray());
     }
 
+    /*
+    Удаляет пару по ключу, поиск индекса таблицы по хэшу и перебор подтаблицы.
+     */
     public void remove(T key) {
         if (key != null) {
             int index = indexOf(key);
@@ -189,6 +292,15 @@ class HashTable<T> {
         }
     }
 
+    public void clear() {
+        for (int i = 0; i < tableSize; i++) {
+            hashTable[i] = new ArrayList<>();
+        }
+    }
+
+    /*
+    Сравнивает таблицы на совпадение размера и наличие всех значений из первой таблицы во второй.
+     */
     @Override
     public boolean equals(Object obj) {
         if (obj == null || obj.getClass() != this.getClass()) {
@@ -261,6 +373,22 @@ class HashTable<T> {
 
     public static HashTable toHashTable(Pair[] obj, int size) {
         HashTable table = new HashTable(size);
+        for (Pair it : obj) {
+            table.add(it);
+        }
+        return table;
+    }
+
+    public static HashTable toHashTable(Pair[] obj, int size, int maxSizeOfCell) {
+        HashTable table = new HashTable(size, maxSizeOfCell);
+        for (Pair it : obj) {
+            table.add(it);
+        }
+        return table;
+    }
+
+    public static HashTable toHashTable(Pair[] obj, int size, int maxSizeOfCell, double multiplierLimitReached) {
+        HashTable table = new HashTable(size, maxSizeOfCell, multiplierLimitReached);
         for (Pair it : obj) {
             table.add(it);
         }
