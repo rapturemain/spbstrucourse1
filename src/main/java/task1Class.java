@@ -1,6 +1,5 @@
 import javafx.util.Pair;
 
-import java.sql.Array;
 import java.util.*;
 
 public class task1Class {
@@ -165,7 +164,7 @@ class HashTable<T> {
         int index = indexOf(key);
         for (Pair<T, T> it : hashTable[index]) {
             T keyBuffer = it.getKey();
-            if (keyBuffer.getClass() == key.getClass() && keyBuffer == key) {
+            if (keyBuffer == key) {
                 return true;
             }
         }
@@ -198,15 +197,44 @@ class HashTable<T> {
     }
 
     /*
-    Возвращает значение по ключу, поиск индекса по хэшу.
+    Возвращает значение по ключу
      */
     public T get(T key) {
-        if (contains(key)) {
-            for (Pair<T, T> it : hashTable[indexOf(key)]) {
-                if (it.getKey() == key) return it.getValue();
-            }
+        for (Pair<T, T> it : hashTable[indexOf(key)]) {
+            if (it.getKey() == key) return it.getValue();
         }
         return null;
+    }
+
+    public List<T> getKeys() {
+        List<T> list = new LinkedList<>();
+        for (int i = 0; i < tableSize; i++) {
+            int size = hashTable[i].size();
+            for (int j = 0; j < size; j++) {
+                list.add(hashTable[i].get(j).getKey());
+            }
+        }
+        return list;
+    }
+
+    /*
+    TODO() ПРОБЛЕМА:
+    См. метод add
+     */
+    public List<T> getValues() {
+        List<T> list = new LinkedList<>();
+        for (int i = 0; i < tableSize; i++) {
+            int size = hashTable[i].size();
+            for (int j = 0; j < size; j++) {
+                T value = hashTable[i].get(j).getValue();
+                if (value.getClass() == LinkedList.class) {
+                    list.addAll((List) value);
+                } else {
+                    list.add(value);
+                }
+            }
+        }
+        return list;
     }
 
     /*
@@ -221,33 +249,31 @@ class HashTable<T> {
         if (obj == null) {
             return;
         }
-        if (!contains(obj.getKey())) {
-            hashTable[indexOf(obj.getKey())].add(obj);
-            totalCells += 1;
-        } else {
-            T key = obj.getKey();
-            T newValue = obj.getValue();
-            T oldValue = null;
-            int cellIndex = indexOf(key);
-            int inCellIndex = 0;
-            int size = hashTable[cellIndex].size();
-            for (int i = 0; i < size; i++) {
-                if (hashTable[cellIndex].get(i).getKey() == key) {
-                    oldValue = hashTable[cellIndex].get(i).getValue();
-                    inCellIndex = i;
-                }
-            }
-            List<T> newList = new LinkedList();
-            if (oldValue.getClass() == LinkedList.class) {
-                newList.addAll((List) oldValue);
-            } else {
-                newList.add(oldValue);
-            }
-            newList.add(newValue);
-            Pair<T, LinkedList<T>> newPair = new Pair(key, newList);
-            hashTable[cellIndex].remove(inCellIndex);
-            hashTable[cellIndex].add((Pair<T, T>) newPair);
+        T key = obj.getKey();
+        if (key == null) {
+            return;
         }
+        T newValue = obj.getValue();
+        int cellIndex = indexOf(obj.getKey());
+        int size = hashTable[cellIndex].size();
+        for (int i = 0; i < size; i++) {
+            if (hashTable[cellIndex].get(i).getKey() == key) {
+                T oldValue = hashTable[cellIndex].get(i).getValue();
+                List<T> newList = new LinkedList();
+                if (oldValue.getClass() == LinkedList.class) {
+                    newList.addAll((List) oldValue);
+                } else {
+                    newList.add(oldValue);
+                }
+                newList.add(newValue);
+                Pair<T, LinkedList<T>> newPair = new Pair(key, newList);
+                hashTable[cellIndex].remove(i);
+                hashTable[cellIndex].add((Pair<T, T>) newPair);
+                return;
+            }
+        }
+        hashTable[indexOf(obj.getKey())].add(obj);
+        totalCells += 1;
     }
 
     public void addAll(Pair<T, T>[] obj) {
