@@ -86,7 +86,7 @@ Description
     2     {4 to "test", ...}
     3     {'c' to {"testOther", true, "+71234567890", ...}, ...}
   */
-class HashTable<T> {
+class HashTable<T> implements Iterable<Pair<T, T>> {
     HashTable() {
         hashTable = new List[tableSize];
         for (int i = 0; i < tableSize; i++) {
@@ -131,7 +131,7 @@ class HashTable<T> {
     Индекс ячейки таблицы по хэшу ключа.
      */
     private int indexOf(T key) {
-        return key.hashCode() % tableSize;
+        return Math.abs(key.hashCode() % tableSize);
     }
 
     /*
@@ -322,6 +322,7 @@ class HashTable<T> {
         for (int i = 0; i < tableSize; i++) {
             hashTable[i] = new ArrayList<>();
         }
+        totalCells = 0;
     }
 
     /*
@@ -363,7 +364,37 @@ class HashTable<T> {
 
     @Override
     public String toString() {
-        return Arrays.toString(this.toArray());
+        if (totalCells == 0) {
+            return "[]";
+        } else {
+            return Arrays.toString(this.toArray());
+        }
+    }
+
+    @Override
+    public Iterator<Pair<T, T>> iterator() {
+        List list = this.toList();
+
+        return new Iterator<Pair<T, T>> () {
+            private final Iterator<Pair<T, T>> iter = list.iterator();
+            private Pair<T, T> current;
+
+            @Override
+            public boolean hasNext() {
+                return iter.hasNext();
+            }
+
+            @Override
+            public Pair<T, T> next() {
+                current = iter.next();
+                return current;
+            }
+
+            @Override
+            public void remove() {
+                HashTable.this.remove(current.getKey());
+            }
+        };
     }
 
     public List<Pair<T, T>> toList() {
@@ -416,7 +447,7 @@ class HashTable<T> {
     public static HashTable toHashTable(Pair[] obj, int size, int maxSizeOfCell, double multiplierLimitReached) {
         HashTable table = new HashTable(size, maxSizeOfCell, multiplierLimitReached);
         for (Pair it : obj) {
-            table.add(it);
+            table   .add(it);
         }
         return table;
     }
