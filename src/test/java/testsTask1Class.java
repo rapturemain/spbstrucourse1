@@ -1,5 +1,9 @@
 import javafx.util.Pair;
 import org.junit.Test;
+
+import java.util.Iterator;
+import java.util.LinkedList;
+
 import static org.junit.Assert.*;
 
 public class testsTask1Class {
@@ -75,5 +79,19 @@ public class testsTask1Class {
         table2.add(new Pair<>(6, 10));
         table2.add(new Pair<>(24, 76));
         assertEquals(table1, table2);
+    }
+
+    @Test
+    public void iterator() {
+        HashTable<String, Integer> table = new HashTable<>(10);
+        table.add(new Pair<>("test", 10));
+        table.add(new Pair<>("other", 24));
+        table.add(new Pair<>("t2", 54));
+        Iterator iter = table.iterator();
+        while (iter.hasNext()) {
+            iter.next();
+            iter.remove();
+        }
+        assertEquals("[]", table.toString());
     }
 }

@@ -33,7 +33,7 @@ class IntHashTable {
     private boolean binarySearch(Integer left, Integer right, Integer number, Integer index) {
         if (left != right) {
             Integer middle = (left + right) / 2;
-            if (hashTableArray[index].get(middle) == number) {
+            if (hashTableArray[index].get(middle).equals(number)) {
                 return true;
             } else {
                 if (hashTableArray[index].get(middle) < number) {
@@ -43,7 +43,7 @@ class IntHashTable {
                 }
             }
         } else {
-            return number == hashTableArray[index].get(left);
+            return number.equals(hashTableArray[index].get(left));
         }
     }
 
@@ -67,7 +67,7 @@ class IntHashTable {
     }
 
     public boolean equals(IntHashTable other) {
-        return this.hashTableArray == other.hashTableArray;
+        return this.hashTableArray.equals(other.hashTableArray);
     }
 }
 
@@ -285,7 +285,7 @@ class HashTable<K, T> implements Iterable<Pair<K, LinkedList<T>>> {
             int cellSize = hashTable[index].size();
             for (int i = 0; i < cellSize; i++) {
                 K keyBuffer = hashTable[index].get(i).getKey();
-                if (keyBuffer.getClass() == key.getClass() && keyBuffer == key) {
+                if (keyBuffer.getClass().equals(key.getClass()) && keyBuffer.equals(key)) {
                     hashTable[index].remove(i);
                     totalCells -= 1;
                     return;
@@ -364,7 +364,7 @@ class HashTable<K, T> implements Iterable<Pair<K, LinkedList<T>>> {
 
     @Override
     public String toString() {
-        if (totalCells == 0) {
+        if (totalCells.equals(0)) {
             return "[]";
         } else {
             return Arrays.toString(this.toArray());
@@ -398,7 +398,7 @@ class HashTable<K, T> implements Iterable<Pair<K, LinkedList<T>>> {
     }
 
     public List<Pair<K, LinkedList<T>>> toList() {
-        if (totalCells == 0) return null;
+        if (totalCells.equals(0)) return null;
         List<Pair<K, LinkedList<T>>> list = new LinkedList<>();
         for (List<Pair<K, LinkedList<T>>> i : hashTable) {
             list.addAll(i);
@@ -407,7 +407,7 @@ class HashTable<K, T> implements Iterable<Pair<K, LinkedList<T>>> {
     }
 
     public Pair<K, LinkedList<T>>[] toArray() {
-        if (totalCells == 0) return null;
+        if (totalCells.equals(0)) return null;
         Pair[] array = new Pair[totalCells];
         int index = 0;
         for (int i = 0; i < tableSize; i++) {
