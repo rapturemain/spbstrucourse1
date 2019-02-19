@@ -73,22 +73,22 @@ class IntHashTable {
 
 /*
 Description
-Хэш таблица с парами различных типов.
+Хэщ мультимапа.
 Данные хранятся в виде массива размером, настраиваемом пользователем или 521, если не указано иного.
 Индексы значений в таблице являются модулем хэша ключа пары по размеру таблицы,
 в соответсвующем данной ячейке подсписке хранится сама пара, а в случае возникновения коллизий в этом подсписке
 хранятся и остальные значения, соответсвующие данной ячейке.
 Если размер подсписка превысит maxSizeOfCell (по стандарту 5), то происходит пересборка таблицы с увеличением её
 размера в multiplierLimitReached раз (по стандарту 1.3).
-Список так же позволяет хранить несколько значений, соответсвующих одному ключу (например, телефонная книга).
+
 | Индекс | Подсписок |
-    1     {1 to 2, "somethingWithSameHash" to true, ...}
-    2     {4 to "test", ...}
-    3     {'c' to {"testOther", true, "+71234567890", ...}, ...}
+    1     {1 to {2}, 5 to {4}, ...}
+    2     {4 to {4}, ...}
+    3     {11 to {324, 435, ...}, ...}
   */
-class HashTable<T> implements Iterable<Pair<T, T>> {
+class HashTable<K, T> implements Iterable<Pair<K, LinkedList<T>>> {
     HashTable() {
-        hashTable = new List[tableSize];
+        hashTable = new ArrayList[tableSize];
         for (int i = 0; i < tableSize; i++) {
             hashTable[i] = new ArrayList<>();
         }
@@ -96,7 +96,7 @@ class HashTable<T> implements Iterable<Pair<T, T>> {
 
     HashTable(int size) {
         tableSize = size;
-        hashTable = new List[tableSize];
+        hashTable = new ArrayList[tableSize];
         for (int i = 0; i < tableSize; i++) {
             hashTable[i] = new ArrayList<>();
         }
@@ -105,7 +105,7 @@ class HashTable<T> implements Iterable<Pair<T, T>> {
     HashTable(int size, int maxSizeOfCell) {
         tableSize = size;
         maxSize = maxSizeOfCell;
-        hashTable = new List[tableSize];
+        hashTable = new ArrayList[tableSize];
         for (int i = 0; i < tableSize; i++) {
             hashTable[i] = new ArrayList<>();
         }
@@ -115,7 +115,7 @@ class HashTable<T> implements Iterable<Pair<T, T>> {
         tableSize = size;
         maxSize = maxSizeOfCell;
         multiplier = multiplierLimitReached;
-        hashTable = new List[tableSize];
+        hashTable = new ArrayList[tableSize];
         for (int i = 0; i < tableSize; i++) {
             hashTable[i] = new ArrayList<>();
         }
@@ -125,12 +125,12 @@ class HashTable<T> implements Iterable<Pair<T, T>> {
     private Integer tableSize = 521;
     private Integer totalCells = 0;
     private Double multiplier = 1.3;
-    private List<Pair<T, T>>[] hashTable;
+    private ArrayList<Pair<K, LinkedList<T>>>[] hashTable;
 
     /*
     Индекс ячейки таблицы по хэшу ключа.
      */
-    private int indexOf(T key) {
+    private int indexOf(K key) {
         return Math.abs(key.hashCode() % tableSize);
     }
 
@@ -140,12 +140,12 @@ class HashTable<T> implements Iterable<Pair<T, T>> {
      */
     private void rebuildTable() {
         tableSize = (int) (tableSize * multiplier);
-        List<Pair<T, T>>[] table = new List[tableSize];
+        ArrayList<Pair<K, LinkedList<T>>>[] table = new ArrayList[tableSize];
         for (int i = 0; i < tableSize; i++) {
             table[i] = new ArrayList<>();
         }
-        for (List<Pair<T, T>> i : hashTable) {
-            for (Pair<T, T> j : i) {
+        for (ArrayList<Pair<K, LinkedList<T>>> i : hashTable) {
+            for (Pair<K, LinkedList<T>> j : i) {
                 table[indexOf(j.getKey())].add(j);
             }
         }
@@ -157,14 +157,13 @@ class HashTable<T> implements Iterable<Pair<T, T>> {
     Использует поиск, основанный на хэше и переборе в листе ячейки таблицы.
     В случае, если какая-то ячейка вдруг имеет длину больше maxSize, то вызывает перестройку таблицы.
      */
-    public boolean contains(T key) {
+    public boolean contains(K key) {
         if (key == null) {
             return false;
         }
         int index = indexOf(key);
-        for (Pair<T, T> it : hashTable[index]) {
-            T keyBuffer = it.getKey();
-            if (keyBuffer == key) {
+        for (Pair<K, LinkedList<T>> it : hashTable[index]) {
+            if (it.getKey().equals(key)) {
                 return true;
             }
         }
@@ -180,14 +179,10 @@ class HashTable<T> implements Iterable<Pair<T, T>> {
         if (value == null) {
             return false;
         }
-        for (List<Pair<T, T>> i : hashTable) {
-            for (Pair<T, T> j : i) {
-                if (j.getValue().getClass() == LinkedList.class) {
-                    for (T it : (LinkedList<T>) (j.getValue())) {
-                        if (it == value) return true;
-                    }
-                } else {
-                    if (j.getValue() == value) {
+        for (ArrayList<Pair<K, LinkedList<T>>> i : hashTable) {
+            for (Pair<K, LinkedList<T>> j : i) {
+                for (T it : j.getValue()) {
+                    if (it.equals(value)) {
                         return true;
                     }
                 }
@@ -196,18 +191,29 @@ class HashTable<T> implements Iterable<Pair<T, T>> {
         return false;
     }
 
+    public boolean containsAll(K[] keys) {
+        for (K key : keys) {
+            if (!contains(key)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     /*
     Возвращает значение по ключу
      */
-    public T get(T key) {
-        for (Pair<T, T> it : hashTable[indexOf(key)]) {
-            if (it.getKey() == key) return it.getValue();
+    public LinkedList<T> get(K key) {
+        for (Pair<K, LinkedList<T>> it : hashTable[indexOf(key)]) {
+            if (it.getKey().equals(key)) {
+                return it.getValue();
+            }
         }
         return null;
     }
 
-    public List<T> getKeys() {
-        List<T> list = new LinkedList<>();
+    public LinkedList<K> getKeys() {
+        LinkedList<K> list = new LinkedList<>();
         for (int i = 0; i < tableSize; i++) {
             int size = hashTable[i].size();
             for (int j = 0; j < size; j++) {
@@ -217,21 +223,14 @@ class HashTable<T> implements Iterable<Pair<T, T>> {
         return list;
     }
 
-    /*
-    TODO() ПРОБЛЕМА:
-    См. метод add
-     */
-    public List<T> getValues() {
-        List<T> list = new LinkedList<>();
+    public LinkedList<T>[] getValues() {
+        LinkedList<T>[] list = new LinkedList[totalCells];
+        int last = 0;
         for (int i = 0; i < tableSize; i++) {
             int size = hashTable[i].size();
             for (int j = 0; j < size; j++) {
-                T value = hashTable[i].get(j).getValue();
-                if (value.getClass() == LinkedList.class) {
-                    list.addAll((List) value);
-                } else {
-                    list.add(value);
-                }
+                LinkedList<T> value = hashTable[i].get(j).getValue();
+                list[last] = value;
             }
         }
         return list;
@@ -240,16 +239,12 @@ class HashTable<T> implements Iterable<Pair<T, T>> {
     /*
     Добавляет пару в таблицу, если такой ключ уже есть в таблице, то создает Pair<T, LinkedList<T>>, и помещает старые
     и новое значения в этот лист.
-    TODO() ПРОБЛЕМА:
-    Если пользователь сначала будет в паре хранить List, то все последующие значения будут помещаться в тот самый лист,
-    вместо создания нового для разных значений
-    "test" to {1, 2, 3} -> "test" to {1, 2, 3, 4} вместо "test" to {1, 2, 3} -> "test" to {{1, 2, 3}, 4}
      */
-    public void add(Pair<T, T> obj) {
+    public void add(Pair<K, T> obj) {
         if (obj == null) {
             return;
         }
-        T key = obj.getKey();
+        K key = obj.getKey();
         if (key == null) {
             return;
         }
@@ -257,27 +252,22 @@ class HashTable<T> implements Iterable<Pair<T, T>> {
         int cellIndex = indexOf(obj.getKey());
         int size = hashTable[cellIndex].size();
         for (int i = 0; i < size; i++) {
-            if (hashTable[cellIndex].get(i).getKey() == key) {
-                T oldValue = hashTable[cellIndex].get(i).getValue();
-                List<T> newList = new LinkedList();
-                if (oldValue.getClass() == LinkedList.class) {
-                    newList.addAll((List) oldValue);
-                } else {
-                    newList.add(oldValue);
-                }
-                newList.add(newValue);
-                Pair<T, LinkedList<T>> newPair = new Pair(key, newList);
+            if (hashTable[cellIndex].get(i).getKey().equals(key)) {
+                LinkedList<T> oldValue = hashTable[cellIndex].get(i).getValue();
+                oldValue.add(newValue);
                 hashTable[cellIndex].remove(i);
-                hashTable[cellIndex].add((Pair<T, T>) newPair);
+                hashTable[cellIndex].add(new Pair(key, oldValue));
                 return;
             }
         }
-        hashTable[indexOf(obj.getKey())].add(obj);
+        LinkedList<T> list = new LinkedList<>();
+        list.add(newValue);
+        hashTable[indexOf(obj.getKey())].add(new Pair(key, list));
         totalCells += 1;
     }
 
-    public void addAll(Pair<T, T>[] obj) {
-        for (Pair<T, T> aObj : obj) {
+    public void addAll(Pair<K, T>[] obj) {
+        for (Pair<K, T> aObj : obj) {
             this.add(aObj);
         }
     }
@@ -289,12 +279,12 @@ class HashTable<T> implements Iterable<Pair<T, T>> {
     /*
     Удаляет пару по ключу, поиск индекса таблицы по хэшу и перебор подтаблицы.
      */
-    public void remove(T key) {
+    public void remove(K key) {
         if (key != null) {
             int index = indexOf(key);
             int cellSize = hashTable[index].size();
             for (int i = 0; i < cellSize; i++) {
-                T keyBuffer = hashTable[index].get(i).getKey();
+                K keyBuffer = hashTable[index].get(i).getKey();
                 if (keyBuffer.getClass() == key.getClass() && keyBuffer == key) {
                     hashTable[index].remove(i);
                     totalCells -= 1;
@@ -304,15 +294,15 @@ class HashTable<T> implements Iterable<Pair<T, T>> {
         }
     }
 
-    public void removeAll(T[] keys) {
-        for (T key : keys) {
+    public void removeAll(K[] keys) {
+        for (K key : keys) {
             remove(key);
         }
     }
 
     public void removeAll(HashTable obj) {
-        for (List<Pair<T, T>> i : obj.hashTable) {
-            for (Pair<T, T> j : i) {
+        for (List<Pair<K, T>> i : obj.hashTable) {
+            for (Pair<K, T> j : i) {
                 this.remove(j.getKey());
             }
         }
@@ -330,7 +320,7 @@ class HashTable<T> implements Iterable<Pair<T, T>> {
      */
     @Override
     public boolean equals(Object obj) {
-        if (obj == null || obj.getClass() != this.getClass()) {
+        if (obj == null || !obj.getClass().equals(this.getClass())) {
             return false;
         }
 
@@ -348,10 +338,20 @@ class HashTable<T> implements Iterable<Pair<T, T>> {
 
             for (int j = 0; j < thisSize; j++) {
                 boolean contains = false;
-                if (other.hashTable[i].contains(hashTable[i].get(j))) {
-                    contains = true;
+                for (int k = 0; k < thisSize; k++) {
+                    Pair<K, LinkedList<T>> otherPair = (Pair<K, LinkedList<T>>) other.hashTable[i].get(k);
+                    K otherKey = otherPair.getKey();
+                    if (hashTable[i].get(j).getKey().equals(otherKey)) {
+                        LinkedList<T> thisValue = hashTable[i].get(j).getValue();
+                        LinkedList<T> otherValue = otherPair.getValue();
+                        if (thisValue.containsAll(otherValue) && otherValue.containsAll(thisValue)) {
+                            contains = true;
+                        }
+                    }
                 }
-                if (!contains) return false;
+                if (!contains) {
+                    return false;
+                }
             }
         }
         return true;
@@ -372,12 +372,12 @@ class HashTable<T> implements Iterable<Pair<T, T>> {
     }
 
     @Override
-    public Iterator<Pair<T, T>> iterator() {
+    public Iterator<Pair<K, LinkedList<T>>> iterator() {
         List list = this.toList();
 
-        return new Iterator<Pair<T, T>> () {
-            private final Iterator<Pair<T, T>> iter = list.iterator();
-            private Pair<T, T> current;
+        return new Iterator<Pair<K, LinkedList<T>>> () {
+            private final Iterator<Pair<K, LinkedList<T>>> iter = list.iterator();
+            private Pair<K, LinkedList<T>> current;
 
             @Override
             public boolean hasNext() {
@@ -385,7 +385,7 @@ class HashTable<T> implements Iterable<Pair<T, T>> {
             }
 
             @Override
-            public Pair<T, T> next() {
+            public Pair<K, LinkedList<T>> next() {
                 current = iter.next();
                 return current;
             }
@@ -397,16 +397,16 @@ class HashTable<T> implements Iterable<Pair<T, T>> {
         };
     }
 
-    public List<Pair<T, T>> toList() {
+    public List<Pair<K, LinkedList<T>>> toList() {
         if (totalCells == 0) return null;
-        List<Pair<T, T>> list = new LinkedList<>();
-        for (List<Pair<T, T>> i : hashTable) {
+        List<Pair<K, LinkedList<T>>> list = new LinkedList<>();
+        for (List<Pair<K, LinkedList<T>>> i : hashTable) {
             list.addAll(i);
         }
         return list;
     }
 
-    public Pair<T, T>[] toArray() {
+    public Pair<K, LinkedList<T>>[] toArray() {
         if (totalCells == 0) return null;
         Pair[] array = new Pair[totalCells];
         int index = 0;
